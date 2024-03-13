@@ -11,13 +11,15 @@ This is a POC for running multiple Autify test plans across Autify For Web and A
 E.g.,
 
 1. A user on mobile dog grooming app will make a request for a dog grooming session.
-2. Another user on the web-based admin panel manually approves the request.
+2. Another user on the web-based admin panel approves the request.
 3. The user on the mobile app sees the request was approved.
 
 In this case you want to automatically run all the parts of the test without manually dropping in and our of both UIs.
 
-This script will do that, sort of. But it won't collate results or do anything to make debugging any easier.
+This script will do that, and optionally give you a JSON file containing the collated results of running all the tests. 
 
+It won't make debugging your tests any easier though, and you should be aware that making scenarios that are dependant on each other while being run on different platforms is just inherently difficult.
+ 
 # Required
 
 Please set a access token in Autify for Web (see: https://help.autify.com/docs/ja/integrate-with-api)
@@ -35,6 +37,8 @@ Create a config file using: `run.py init`
 Run a script using `run.py run {{path to script}}`
 
 (Dryrun with the `--dryrun` flag)
+
+To output collated results, use the `--outputfile` flag and specifify a path. The output will be in JSON.
 
 # About script format
 

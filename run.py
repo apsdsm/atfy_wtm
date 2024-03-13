@@ -10,6 +10,7 @@ app = typer.Typer()
 mobtok = "MOBILE-API-TOKEN"
 webtok = "WEB-API-TOKEN"
 maxlife = 600
+output = []
 
 def runtp(url, config):
 
@@ -40,6 +41,7 @@ def runtp(url, config):
 def runwebtp(proj, plan, config):
     # dry run will just output target info then return true
     if config["dryrun"]:
+        appendOutput("dryrun", {}, testtype="web", project=proj, testplan=plan)
         print(f"would run: project = {proj} | test plan = {plan}")
         return True
 
@@ -72,11 +74,14 @@ def runwebtp(proj, plan, config):
             print("q")
         elif status == "passed":
             print("PASSED")
+            appendOutput(status, chk_res, testtype="web", project=proj, testplan=plan)
             return True
         elif status == "failed":
+            appendOutput(status, chk_res, testtype="web", project=proj, testplan=plan)
             print("FAILED")
             return False
         elif status == "canceled":
+            appendOutput(status, chk_res, testtype="web", project=proj, testplan=plan)
             print("CANCELED")
             return False
         else:
@@ -94,6 +99,7 @@ def runmobtp(proj, plan, bild, config):
 
     # dry run will just output target info then return true
     if config["dryrun"]:
+        appendOutput("dryrun", {}, testtype="mobile", project=proj, testplan=plan, build=bild)
         print(f"would run: project = {proj} | test plan = {plan} | build = {bild}")
         return True
 
@@ -131,12 +137,15 @@ def runmobtp(proj, plan, bild, config):
         elif status == "waiting":
             print("z")
         elif status == "passed":
+            appendOutput(status, out, testtype="mobile", project=proj, testplan=plan, build=bild)
             print("PASSED")
             return True
         elif status == "failed":
+            appendOutput(status, out, testtype="mobile", project=proj, testplan=plan, build=bild)
             print("FAILED")
             return False
         elif status == "canceled":
+            appendOutput(status, out, testtype="mobile", project=proj, testplan=plan, build=bild)
             print("CANCELED")
             return False
         else:
@@ -150,11 +159,36 @@ def runmobtp(proj, plan, bild, config):
     print("TIMEOUT - FAILED")
     return False
 
+
 def readconfig(f):
     with open(f) as infile:
         config = json.load(infile)
 
     return config
+
+def appendOutput(status:str, response, testtype=None, project=None, testplan=None, build=None):
+    append = {
+        "status": status, 
+        "testtype" : testtype,
+        "project": project,
+        "testplan": testplan,
+        "build": build,
+        "response": response
+    }
+
+    filtered = dict(filter(lambda item: item[1] is not None, append.items()))
+
+    output.append(filtered)    
+
+def saveOutput(script, status, path):
+    outputfile = {
+        "script": script,
+        "status": status,
+        "results": output,
+    }
+
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(outputfile, f, ensure_ascii=False,indent=4)
 
 @app.command()
 def init(
@@ -178,7 +212,8 @@ def init(
 def run(
     targetfile: str, 
     dryrun: Annotated[bool, typer.Option(help="only pretend to run tests")] = False,
-    configfile: Annotated[str, typer.Option(help="path to config file")] = "./config.json"
+    configfile: Annotated[str, typer.Option(help="path to config file")] = "./config.json",
+    outputfile: Annotated[str, typer.Option(help="path to output file")] = None,
     ):
 
     config = readconfig(configfile)
@@ -187,6 +222,9 @@ def run(
     # get the contents of the test file as an array (1 line each)
     with open(targetfile, 'r') as infile:
         commands = infile.read().splitlines()
+
+    status = "passed"
+    message = "TEST SCRIPT PASSED"
 
     for c in commands:
         # if you see "wait" then wait for keyboard input before continuing
@@ -199,11 +237,17 @@ def run(
             ok = runtp(c, config)
 
             if not ok:
-                print("TEST SCRIPT FAILED - EXITING")
-                exit()
+                status = "failed"
+                message = "TEST SCRIPT FAILED"
+                break
+    
+    print(message)
+    
+    if outputfile is not None:
+        print("SAVING OUTPUT")
+        saveOutput(targetfile, status, outputfile)
 
-    print("TEST SCRIPT PASSED - EXITING")
-
+    print("EXITING")
 
 if __name__ == "__main__":
     app()
