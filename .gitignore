@@ -2,3 +2,4 @@
 config.json
 .venv
 output.json
+__pycache__

@@ -22,11 +22,11 @@ It won't make debugging your tests any easier though, and you should be aware th
  
 # Required
 
-Please set a access token in Autify for Web (see: https://help.autify.com/docs/ja/integrate-with-api)
+You will need an active account for the platform/s you want to test on.
 
-Please set an access token in Autify for Mobile (see: https://help.autify.com/mobile/docs/ja/api-integration)
+Please set a access token in Autify for Web. You will need the token on hand for the init step. (see: https://help.autify.com/docs/ja/integrate-with-api)
 
-Please install the Autify CLI tool (see: https://help.autify.com/docs/ja/autify-command-line-interface)
+Please set an access token in Autify for Mobile. You will need the toen on hand for the init step. (see: https://help.autify.com/mobile/docs/ja/api-integration)
 
 # Usage
 
