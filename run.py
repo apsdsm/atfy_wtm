@@ -5,10 +5,9 @@ import time
 import requests
 import typer
 from typing_extensions import Annotated
+from autifyapi import web
 
 app = typer.Typer()
-mobtok = "MOBILE-API-TOKEN"
-webtok = "WEB-API-TOKEN"
 maxlife = 600
 output = []
 
@@ -47,45 +46,49 @@ def runwebtp(proj, plan, config):
 
     print(f"running: project = {proj} | test plan = {plan}")
 
-    # run the web plan and get result ID
-    # this uses the command line tool
-    # see: https://github.com/autifyhq/autify-cli
-    run_res = subprocess.run(["autify", "web", "api", "execute-schedule", "--schedule-id="+plan], stdout=subprocess.PIPE)
-    run_out = json.loads(run_res.stdout.decode())
+    output = web.run_testplan(config["web_token"], plan)
 
-    result_id = run_out["data"]["id"]
+    if not output.ok:
+        print("ERROR running testplan: " + output.data())
+        return False
+
+    result_id = output.res["data"]["id"]
     timeout = maxlife
 
     # poll result until success or fail state
     while timeout > 0:
 
-        # check status of result
-        # e.g., runs command: autify web api describe-result --project-id=4865 --result-id=3057313
-        chk_res = subprocess.run(["autify", "web", "api", "describe-result", "--project-id="+proj, "--result-id="+result_id], stdout=subprocess.PIPE)
-        chk_res = json.loads(chk_res.stdout.decode())
+        output = web.get_result(config["web_token"], proj, result_id)
 
-        status = chk_res["status"]
-
-        if status == "running":
+        if not output.ok:
+            print("ERROR checking result")
+            print(output.res)
+            return False
+        if output.status == "running":
             print(".")
-        elif status == "waiting":
+        elif output.status == "waiting":
             print("z")
-        elif status == "queuing":
+        elif output.status == "queuing":
             print("q")
-        elif status == "passed":
+        elif output.status == "passed":
             print("PASSED")
-            appendOutput(status, chk_res, testtype="web", project=proj, testplan=plan)
+            appendOutput(output.status, output.res, testtype="web", project=proj, testplan=plan)
             return True
-        elif status == "failed":
-            appendOutput(status, chk_res, testtype="web", project=proj, testplan=plan)
+        elif output.status == "failed":
+            appendOutput(output.status, output.res, testtype="web", project=proj, testplan=plan)
             print("FAILED")
             return False
-        elif status == "canceled":
-            appendOutput(status, chk_res, testtype="web", project=proj, testplan=plan)
+        elif output.status == "canceled":
+            appendOutput(output.status, output.res, testtype="web", project=proj, testplan=plan)
             print("CANCELED")
             return False
+        elif output.status == "error":
+            print("got error status")
+            print(output.res)
+            print("ABORTING")
+            return False
         else:
-            print("got unknown status: " + status)
+            print("got unknown status: " + output.status)
             print("ABORTING")
             return False
 
@@ -169,9 +172,9 @@ def readconfig(f):
 def appendOutput(status:str, response, testtype=None, project=None, testplan=None, build=None):
     append = {
         "status": status, 
-        "testtype" : testtype,
+        "test_type" : testtype,
         "project": project,
-        "testplan": testplan,
+        "test_plan": testplan,
         "build": build,
         "response": response
     }
